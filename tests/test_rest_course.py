@@ -15,10 +15,18 @@ def client():
 @pytest.fixture(scope="module", autouse=True)
 def setup(client):
     # Create some BDBs
+    bdbs = []
     for _ in range(5):
         i = random.randint(1000, 10000)
         params = {"name": f"foo{i}", "memory_size": i}
-        client.post(BDBS_URL, json=params)
+        resp = client.post(BDBS_URL, json=params)
+        bdbs.append(resp.json()['uid'])
+    yield
+
+    #for uid in bdbs:
+    #    url = f'{BDBS_URL}/{uid}'
+    #    client.delete(url)
+    client.delete(BDBS_URL)
 
 
 def test_nothing(client):
@@ -62,4 +70,9 @@ def test_create_bdb(client):
 
     # Clean up
     # TODO: Not implemented yet on the server side
-    # client.delete(bdb_url)
+    client.delete(bdb_url)
+
+    with pytest.raises(httpx.HTTPStatusError) as e:
+        client.get(bdb_url)
+    #import pdb; pdb.set_trace()
+    assert e.value.response.status_code==404

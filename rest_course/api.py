@@ -1,7 +1,7 @@
 # PEP 585
 from collections.abc import Iterable
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Response
 
 from .params import BDBParams
 from .types import BDB, UID
@@ -49,3 +49,27 @@ def get_all_bdbs():
     for uid in dal.bdb_keys():
         bdb = dal.load_bdb(UID(uid))
         yield bdb
+
+
+
+@app.delete("/bdbs/{uid}", tags=["bdb"], operation_id="delete_bdb",
+    status_code=status.HTTP_204_NO_CONTENT)
+def delete_bdb(uid: UID):
+    try:
+        dal.delete_bdb(uid)
+    except dal.MissingUidException:
+        raise HTTPException(status_code=404)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+
+@app.delete("/bdbs", tags=["bdb"], operation_id="delete_all_bdbs")
+def delete_all_bdbs():
+    try:
+        dal.delete_all_bdbs()
+    except Exception:
+        raise  HTTPException(status_code=500)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

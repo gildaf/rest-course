@@ -8,6 +8,8 @@ _connection = None
 BDB_ID_COUNTER = "counter"
 BDB_UIDS = "bdb_uids"
 
+class MissingUidException(Exception):
+    pass
 
 def get_next_id() -> int:
     client = connect()
@@ -40,3 +42,13 @@ def load_bdb(uid: UID) -> typing.Optional[BDB]:
 def bdb_keys() -> typing.Iterable[UID]:
     client = connect()
     return [UID(uid) for uid in client.smembers(BDB_UIDS)]
+
+def delete_bdb(uid: UID):
+    client = connect()
+    if client.delete(f"bdb:{uid}") == 0:
+        raise MissingUidException(f"missing bdb:{uid}")
+    client.srem(BDB_UIDS, uid)
+
+def delete_all_bdbs():
+    for uid in bdb_keys():
+        delete_bdb(uid)
