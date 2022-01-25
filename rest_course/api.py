@@ -5,11 +5,9 @@ from fastapi import FastAPI, HTTPException, status
 
 from .params import BDBParams
 from .types import BDB, UID
+from . import dal
 
 app = FastAPI(title="REST Course", description="REST API Course")
-
-all_bdbs: dict[UID, BDB] = {}
-bdb_last_uid = 0
 
 
 @app.post(
@@ -20,8 +18,7 @@ bdb_last_uid = 0
     response_model=BDB,
 )
 def create_bdb(req: BDBParams):
-    global bdb_last_uid
-    bdb_last_uid += 1
+    bdb_last_uid = dal.get_next_id()
     uid = UID(bdb_last_uid)
 
     bdb = BDB(
@@ -30,17 +27,16 @@ def create_bdb(req: BDBParams):
         type=req.type,
         memory_size=req.memory_size,
     )
-
-    all_bdbs[uid] = bdb
+    dal.save_bdb(bdb)
     return bdb
 
 
 @app.get("/bdbs/{uid}", tags=["bdb"], operation_id="get_bdb", response_model=BDB)
 def get_bdb(uid: UID):
-    try:
-        return all_bdbs[uid]
-    except LookupError:
+    bdb = dal.load_bdb(uid)
+    if bdb is None:
         raise HTTPException(status_code=404)
+    return bdb
 
 
 @app.get(
@@ -50,5 +46,6 @@ def get_bdb(uid: UID):
     response_model=Iterable[BDB],
 )
 def get_all_bdbs():
-    for uid in all_bdbs:
-        yield all_bdbs[uid]
+    for uid in dal.bdb_keys():
+        bdb = dal.load_bdb(UID(uid))
+        yield bdb
